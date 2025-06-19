@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winamp Web Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tahoma', 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .winamp-container {
+            width: 100%;
+            max-width: 400px;
+            background: #1e1e1e;
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #444;
+            z-index: 10;
+        }
+        
+        .winamp-titlebar {
+            background: linear-gradient(to bottom, #2a5b8c, #1b3d6d);
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 12px;
+            border-bottom: 1px solid #000;
+            cursor: move;
+            user-select: none;
+        }
+        
+        .title-text {
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        }
+        
+        .title-controls span {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #555;
+            border-radius: 3px;
+            margin-left: 5px;
+            text-align: center;
+            line-height: 16px;
+            font-size: 10px;
+            cursor: pointer;
+            box-shadow: inset -1px -1px 0 rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+        
+        .title-controls span:hover {
+            background: #666;
+        }
+        
+        .winamp-display {
+            background: #0e0e0e;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+        
+        .display-inner {
+            background: #0f3a1f;
+            border: 1px solid #1c5c2e;
+            border-radius: 3px;
+            padding: 10px;
+            color: #7fdb9a;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .track-info {
+            font-weight: bold;
+            white-space: nowrap;
+            position: absolute;
+            width: 100%;
+        }
+        
+        .scrolling {
+            animation: scrollText 15s linear infinite;
+        }
+        
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        
+        .progress-container {
+            margin-top: 5px;
+            background: #333;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
+            height: 100%;
+            width: 0;
+            border-radius: 3px;
+            transition: width 0.5s linear;
+        }
+        
+        .winamp-controls {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            background: #292929;
+            border-bottom: 1px solid #444;
+        }
+        
+        .control-btn {
+            background: linear-gradient(to bottom, #4d4d4d, #2d2d2d);
+            border: 1px solid #000;
+            border-radius: 4px;
+            color: #ccc;
+            font-size: 12px;
+            padding: 8px 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+        
+        .control-btn i {
+            font-size: 18px;
+            margin-bottom: 3px;
+        }
+        
+        .control-btn:hover {
+            background: linear-gradient(to bottom, #5d5d5d, #3d3d3d);
+        }
+        
+        .control-btn:active {
+            box-shadow: inset 0 2px 0 rgba(0,0,0,0.3);
+            transform: translateY(1px);
+        }
+        
+        .winamp-playlist {
+            background: #222;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .playlist-title {
+            color: #ddd;
+            font-size: 12px;
+            padding: 5px 0;
+            border-bottom: 1px solid #444;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .playlist-item {
+            padding: 8px 10px;
+            font-size: 12px;
+            color: #aaa;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .playlist-item:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        
+        .playlist-item.active {
+            background: #1b3d6d;
+            color: white;
+        }
+        
+        .playlist-item .track-num {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .winamp-statusbar {
+            background: linear-gradient(to bottom, #2a5b8c, #1b3d6d);
+            padding: 5px 10px;
+            color: white;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-text {
+            font-weight: bold;
+        }
+        
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .volume-slider {
+            width: 80px;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .volume-level {
+            background: linear-gradient(to right, #4CAF50, #8BC34A);
+            height: 100%;
+            width: 70%;
+            border-radius: 4px;
+        }
+        
+        .winamp-eq {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #1a1a1a;
+            border-top: 1px solid #444;
+        }
+        
+        .eq-bar {
+            width: 6px;
+            height: 30px;
+            background: #333;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .eq-level {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #4CAF50, #8BC34A);
+            height: 0%;
+            transition: height 0.3s ease;
+        }
+        
+        .winamp-watermark {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 24px;
+            font-weight: bold;
+            font-style: italic;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+        
+        .visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.1;
+        }
+        
+        @keyframes scrollText {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* Scrollbar styling */
+        .winamp-playlist::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .winamp-playlist::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        .winamp-playlist::-webkit-scrollbar-thumb {
+            background: #2a5b8c;
+            border-radius: 4px;
+        }
+        
+        .winamp-playlist::-webkit-scrollbar-thumb:hover {
+            background: #3a7bac;
+        }
+        
+        /* GitHub corner */
+        .github-corner {
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 100;
+        }
+        
+        .github-corner svg {
+            fill: #2a5b8c;
+            color: #fff;
+        }
+        
+        .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out;
+        }
+        
+        @keyframes octocat-wave {
+            0%, 100% { transform: rotate(0); }
+            20%, 60% { transform: rotate(-25deg); }
+            40%, 80% { transform: rotate(10deg); }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .winamp-container {
+                max-width: 95%;
+            }
+            
+            .winamp-playlist {
+                max-height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="winamp-container" id="winampContainer">
+        <div class="winamp-titlebar" id="titlebar">
+            <div class="title-text">Winamp Web Player</div>
+            <div class="title-controls">
+                <span id="minimizeBtn">_</span>
+                <span id="maximizeBtn">□</span>
+                <span id="closeBtn">×</span>
+            </div>
+        </div>
+        
+        <div class="winamp-display">
+            <div class="display-inner">
+                <div class="track-info" id="trackInfo">Nirvana - Smells Like Teen Spirit</div>
+                <div class="time-info">
+                    <div id="currentTime">0:00</div>
+                    <div id="totalTime">4:38</div>
+                </div>
+            </div>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <div class="winamp-controls">
+            <div class="control-btn" id="prevBtn">
+                <i class="fas fa-step-backward"></i>
+                <span>Prev</span>
+            </div>
+            <div class="control-btn" id="playBtn">
+                <i class="fas fa-play"></i>
+                <span>Play</span>
+            </div>
+            <div class="control-btn" id="pauseBtn">
+                <i class="fas fa-pause"></i>
+                <span>Pause</span>
+            </div>
+            <div class="control-btn" id="stopBtn">
+                <i class="fas fa-stop"></i>
+                <span>Stop</span>
+            </div>
+            <div class="control-btn" id="nextBtn">
+                <i class="fas fa-step-forward"></i>
+                <span>Next</span>
+            </div>
+        </div>
+        
+        <div class="winamp-playlist">
+            <div class="playlist-title">
+                <span>Playlist</span>
+                <span id="trackCount">5 tracks</span>
+            </div>
+            <div class="playlist-item active">
+                <span class="track-num">1</span>
+                <span>Nirvana - Smells Like Teen Spirit</span>
+            </div>
+            <div class="playlist-item">
+                <span class="track-num">2</span>
+                <span>The Offspring - Pretty Fly (For a White Guy)</span>
+            </div>
+            <div class="playlist-item">
+                <span class="track-num">3</span>
+                <span>Green Day - Basket Case</span>
+            </div>
+            <div class="playlist-item">
+                <span class="track-num">4</span>
+                <span>Blink-182 - All the Small Things</span>
+            </div>
+            <div class="playlist-item">
+                <span class="track-num">5</span>
+                <span>Red Hot Chili Peppers - Californication</span>
+            </div>
+        </div>
+        
+        <div class="winamp-statusbar">
+            <div class="status-text">Stereo 44100 Hz</div>
+            <div class="volume-container">
+                <i class="fas fa-volume-up" id="volumeIcon" style="color: #ccc;"></i>
+                <div class="volume-slider" id="volumeSlider">
+                    <div class="volume-level" id="volumeLevel"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="winamp-eq">
+            <div class="eq-bar"><div class="eq-level" id="eq1"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq2"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq3"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq4"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq5"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq6"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq7"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq8"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq9"></div></div>
+            <div class="eq-bar"><div class="eq-level" id="eq10"></div></div>
+        </div>
+    </div>
+    
+    <div class="winamp-watermark">Winamp</div>
+    
+    <canvas class="visualizer" id="visualizer"></canvas>
+    
+    <a href="https://github.com" class="github-corner" target="_blank" aria-label="View source on GitHub">
+        <svg width="80" height="80" viewBox="0 0 250 250" style="fill:#2a5b8c; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
+            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+        </svg>
+    </a>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Player state
+            const player = {
+                playing: false,
+                currentTrack: 0,
+                currentTime: 0,
+                volume: 0.7,
+                tracks: [
+                    { title: "Nirvana - Smells Like Teen Spirit", duration: 278 },
+                    { title: "The Offspring - Pretty Fly (For a White Guy)", duration: 190 },
+                    { title: "Green Day - Basket Case", duration: 183 },
+                    { title: "Blink-182 - All the Small Things", duration: 169 },
+                    { title: "Red Hot Chili Peppers - Californication", duration: 321 }
+                ],
+                progressInterval: null,
+                eqInterval: null
+            };
+            
+            // DOM elements
+            const winampContainer = document.getElementById('winampContainer');
+            const titlebar = document.getElementById('titlebar');
+            const trackInfo = document.getElementById('trackInfo');
+            const currentTime = document.getElementById('currentTime');
+            const totalTime = document.getElementById('totalTime');
+            const progressBar = document.getElementById('progressBar');
+            const progressContainer = document.getElementById('progressContainer');
+            const playBtn = document.getElementById('playBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const playlistItems = document.querySelectorAll('.playlist-item');
+            const volumeLevel = document.getElementById('volumeLevel');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeIcon = document.getElementById('volumeIcon');
+            const trackCount = document.getElementById('trackCount');
+            const visualizer = document.getElementById('visualizer');
+            const ctx = visualizer.getContext('2d');
+            
+            // EQ elements
+            const eqBars = [
+                document.getElementById('eq1'),
+                document.getElementById('eq2'),
+                document.getElementById('eq3'),
+                document.getElementById('eq4'),
+                document.getElementById('eq5'),
+                document.getElementById('eq6'),
+                document.getElementById('eq7'),
+                document.getElementById('eq8'),
+                document.getElementById('eq9'),
+                document.getElementById('eq10')
+            ];
+            
+            // Initialize player
+            function initPlayer() {
+                updateTrackInfo();
+                updateVolume();
+                
+                // Set canvas size
+                visualizer.width = window.innerWidth;
+                visualizer.height = window.innerHeight;
+                
+                // Initialize visualizer animation
+                requestAnimationFrame(drawVisualizer);
+                
+                // Set track count
+                trackCount.textContent = player.tracks.length + " tracks";
+            }
+            
+            // Update track info display
+            function updateTrackInfo() {
+                trackInfo.textContent = player.tracks[player.currentTrack].title;
+                totalTime.textContent = formatTime(player.tracks[player.currentTrack].duration);
+                
+                // Update active playlist item
+                playlistItems.forEach((item, index) => {
+                    if (index === player.currentTrack) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+                
+                // Add scrolling animation
+                trackInfo.classList.add('scrolling');
+            }
+            
+            // Format seconds to MM:SS
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs < 10 ? '0' + secs : secs}`;
+            }
+            
+            // Update progress bar and timer
+            function updateProgress() {
+                if (player.playing) {
+                    player.currentTime++;
+                    
+                    // Calculate progress percentage
+                    const progressPercent = (player.currentTime / player.tracks[player.currentTrack].duration) * 100;
+                    progressBar.style.width = progressPercent + '%';
+                    
+                    // Update current time
+                    currentTime.textContent = formatTime(player.currentTime);
+                    
+                    // End of track
+                    if (player.currentTime >= player.tracks[player.currentTrack].duration) {
+                        playNext();
+                    }
+                }
+            }
+            
+            // Update volume display
+            function updateVolume() {
+                volumeLevel.style.width = (player.volume * 100) + '%';
+                
+                // Update volume icon
+                if (player.volume === 0) {
+                    volumeIcon.className = 'fas fa-volume-mute';
+                } else if (player.volume < 0.5) {
+                    volumeIcon.className = 'fas fa-volume-down';
+                } else {
+                    volumeIcon.className = 'fas fa-volume-up';
+                }
+            }
+            
+            // Simulate EQ animation
+            function updateEQ() {
+                eqBars.forEach(bar => {
+                    const newHeight = Math.floor(Math.random() * 80) + 10;
+                    bar.style.height = newHeight + '%';
+                });
+            }
+            
+            // Play button handler
+            playBtn.addEventListener('click', function() {
+                if (!player.playing) {
+                    player.playing = true;
+                    
+                    // Start progress update
+                    player.progressInterval = setInterval(updateProgress, 1000);
+                    
+                    // Start EQ animation
+                    player.eqInterval = setInterval(updateEQ, 150);
+                    
+                    // Update play button
+                    playBtn.querySelector('i').className = 'fas fa-play';
+                }
+            });
+            
+            // Pause button handler
+            pauseBtn.addEventListener('click', function() {
+                if (player.playing) {
+                    player.playing = false;
+                    clearInterval(player.progressInterval);
+                    clearInterval(player.eqInterval);
+                }
+            });
+            
+            // Stop button handler
+            stopBtn.addEventListener('click', function() {
+                player.playing = false;
+                clearInterval(player.progressInterval);
+                clearInterval(player.eqInterval);
+                
+                player.currentTime = 0;
+                progressBar.style.width = '0%';
+                currentTime.textContent = '0:00';
+                
+                // Reset EQ bars
+                eqBars.forEach(bar => {
+                    bar.style.height = '0%';
+                });
+            });
+            
+            // Previous track
+            prevBtn.addEventListener('click', function() {
+                player.currentTrack--;
+                if (player.currentTrack < 0) {
+                    player.currentTrack = player.tracks.length - 1;
+                }
+                resetPlayer();
+                updateTrackInfo();
+            });
+            
+            // Next track
+            nextBtn.addEventListener('click', playNext);
+            
+            function playNext() {
+                player.currentTrack++;
+                if (player.currentTrack >= player.tracks.length) {
+                    player.currentTrack = 0;
+                }
+                resetPlayer();
+                updateTrackInfo();
+            }
+            
+            function resetPlayer() {
+                player.playing = false;
+                player.currentTime = 0;
+                clearInterval(player.progressInterval);
+                clearInterval(player.eqInterval);
+                
+                progressBar.style.width = '0%';
+                currentTime.textContent = '0:00';
+                
+                // Reset EQ bars
+                eqBars.forEach(bar => {
+                    bar.style.height = '0%';
+                });
+            }
+            
+            // Playlist item selection
+            playlistItems.forEach((item, index) => {
+                item.addEventListener('click', function() {
+                    player.currentTrack = index;
+                    resetPlayer();
+                    updateTrackInfo();
+                });
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('click', function(e) {
+                const rect = volumeSlider.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                player.volume = Math.max(0, Math.min(1, percent));
+                updateVolume();
+            });
+            
+            // Progress bar seeking
+            progressContainer.addEventListener('click', function(e) {
+                const rect = progressContainer.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                player.currentTime = Math.floor(percent * player.tracks[player.currentTrack].duration);
+                progressBar.style.width = (percent * 100) + '%';
+                currentTime.textContent = formatTime(player.currentTime);
+            });
+            
+            // Draggable window
+            let isDragging = false;
+            let offsetX, offsetY;
+            
+            titlebar.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                offsetX = e.clientX - winampContainer.getBoundingClientRect().left;
+                offsetY = e.clientY - winampContainer.getBoundingClientRect().top;
+                winampContainer.style.cursor = 'grabbing';
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    winampContainer.style.left = (e.clientX - offsetX) + 'px';
+                    winampContainer.style.top = (e.clientY - offsetY) + 'px';
+                    winampContainer.style.position = 'fixed';
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                winampContainer.style.cursor = 'default';
+            });
+            
+            // Window controls
+            document.getElementById('minimizeBtn').addEventListener('click', function() {
+                winampContainer.style.opacity = '0.7';
+                winampContainer.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    winampContainer.style.opacity = '1';
+                    winampContainer.style.transform = 'scale(1)';
+                }, 300);
+            });
+            
+            document.getElementById('maximizeBtn').addEventListener('click', function() {
+                if (winampContainer.style.width === '95vw') {
+                    winampContainer.style.width = '';
+                    winampContainer.style.height = '';
+                    winampContainer.style.position = '';
+                    winampContainer.style.top = '';
+                    winampContainer.style.left = '';
+                    winampContainer.style.maxWidth = '400px';
+                } else {
+                    winampContainer.style.width = '95vw';
+                    winampContainer.style.height = '95vh';
+                    winampContainer.style.position = 'fixed';
+                    winampContainer.style.top = '50%';
+                    winampContainer.style.left = '50%';
+                    winampContainer.style.transform = 'translate(-50%, -50%)';
+                    winampContainer.style.maxWidth = 'none';
+                }
+            });
+            
+            document.getElementById('closeBtn').addEventListener('click', function() {
+                winampContainer.style.opacity = '0';
+                winampContainer.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    winampContainer.style.display = 'none';
+                }, 300);
+            });
+            
+            // Visualizer animation
+            function drawVisualizer() {
+                ctx.clearRect(0, 0, visualizer.width, visualizer.height);
+                
+                if (player.playing) {
+                    ctx.fillStyle = 'rgba(42, 91, 140, 0.1)';
+                    ctx.beginPath();
+                    
+                    const width = visualizer.width;
+                    const height = visualizer.height;
+                    const time = Date.now() * 0.001;
+                    
+                    for (let i = 0; i < 100; i++) {
+                        const x = (i / 100) * width;
+                        const y = height / 2 + Math.sin(x * 0.02 + time) * 50 * Math.sin(time * 0.5);
+                        const radius = 2 + Math.sin(x * 0.05 + time) * 1.5;
+                        
+                        ctx.moveTo(x, y);
+                        ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    }
+                    
+                    ctx.fill();
+                }
+                
+                requestAnimationFrame(drawVisualizer);
+            }
+            
+            // Initialize
+            initPlayer();
+        });
+    </script>
+</body>
+</html>
